@@ -4,31 +4,42 @@
 #include <queue>
 #include <stack>
 #include <algorithm>
+#include <set>
+#include <limits>
 
 using namespace std;
 
-ifstream fin("numeFisier.in");
-ofstream fout("numeFisier.out");
+ifstream fin("bellmanford.in");
+ofstream fout("bellmanford.out");
+
+//---------------------------------COD TEMA 1--------------------------------------------------------------------------------
 
 class Graf
 {
-private:
-
+protected:
 	int nrMuchii, nrNoduri;
-	vector<vector<int>> listaAdiacenta;
+	vector<vector<int > > listaAdiacenta;
 	bool orientat;
+private:
+	void adaugaMuchie(int, int, bool);
+	//Metoda auxiliara folosita in NrCompConexeDFS
+	void DFSAux(int, vector<bool>&);	
+	//Metoda auxiliara folosita in Biconexe()
+	void BCXAux(int, int&, vector<int>&, vector<int>&, vector<int>&, stack<int>&, vector<vector<int>>&);
+	//Metoda auxiliara folosita in CTC()
+	void CTCAux(int, int&, vector<int>&, vector<int>&, vector<bool>&, stack<int>&, vector<vector<int>>&);
+	//Metoda auxiliara folosita in MuchiiCrit()
+	void MuchiiAux(int, int&, vector<int>&, vector<int>&, vector<int>&, vector<bool>&, vector<vector<int>>&);
+	//Metoda auxiliara pt Sortarea topologica
+	void DFSTopological(int, vector<bool>&, stack<int>&);	
 
-	void adaugaMuchie(int, int, bool);		    //Am decis sa fac adaugarea unei muchii in lista de adiacenta o functie, poate o sa fie useful later?
-	void DFSAux(int, vector<bool>&);			//Functie auxiliara pt problema DFS de pe infoarena
-	void BCXAux(int, int&, vector<int>&, vector<int>&, vector<int>&, stack<int>&, vector<vector<int>>&);		//Metoda auxiliara pt problema Componente Biconexe de pe infoarena
-	void CTCAux(int, int&, vector<int>&, vector<int>&, vector<bool>&, stack<int>&, vector<vector<int>>&);		//Metoda auxiliara pt CTC
-	void MuchiiAux(int, int&, vector<int>&, vector<int>&, vector<int>&, vector<bool>&, vector<vector<int>>&);	//Metoda auxiliara pt MuchiiCrit()
-	void DFSTopological(int, vector<bool>&, stack<int>&);			//Metoda auxiliara pt Sortarea topologica
+	friend void countSort(vector<int>&);
 public:
 	Graf();
 	Graf(int, int, bool);
+	void setListaAdiacenta();
 	void BFS(int);							//Metoda care rezolva problema BFS de pe infoarena
-	int DFSrezolvare(int);					//Metoda care rezolva problema DFS de pe infoarena
+	int NrCompConexeDFS(int);				//Metoda care rezolva problema DFS de pe infoarena
 	void Biconexe();						//Metoda care rezolva problema Componente Biconexe de pe infoarena
 	void HavelHakimi();						//Metoda care pune in practica Havel Hakimi	
 	void CTC();								//Metoda care afiseaza componentele tare conexe ale grafului	
@@ -45,12 +56,18 @@ Graf::Graf()
 
 Graf::Graf(int n, int m, bool orr)
 {
-	int x, y;
 
 	nrNoduri = n;
 	nrMuchii = m;
 	orientat = orr;
-	listaAdiacenta.resize(nrNoduri + 1);	//Construim si reprezentarea grafului in constructor
+	
+}
+
+void Graf::setListaAdiacenta()
+{
+	int x, y;
+
+	listaAdiacenta.resize(nrNoduri + 1);	
 
 	for (int i = 0; i < nrMuchii; i++)
 	{
@@ -67,6 +84,17 @@ void Graf::adaugaMuchie(int n1, int n2, bool orr)
 		listaAdiacenta[n2].push_back(n1);
 	}
 }
+
+// Resume BFS:
+// 
+// Fiind dat un nod S, se determina,
+// pentru fiecare nod X, numarul minim de arce ce trebuie 
+// parcurse pentru a ajunge din nodul sursa S la nodul X
+// 
+// Mod functionare:
+// 
+// Folosim BFS si retinem distantele intr-un vector
+// Apoi le afisam
 
 void Graf::BFS(int nodStart)
 {
@@ -101,12 +129,17 @@ void Graf::BFS(int nodStart)
 	}
 }
 
+// Resume DFSAux:
+//
+// DFS care modifica lista de noduri vizitate din metoda NrCompConexeDFS
+//
+
 void Graf::DFSAux(int nodStart, vector<bool>& vizitate)
 {
 	vizitate[nodStart] = true;
 	for (int i : listaAdiacenta[nodStart])
 	{
-		if (!vizitate[i])					//DFS care modifica lista de noduri vizitate din metoda care rezolva problema DFS
+		if (!vizitate[i])					
 		{
 			DFSAux(i, vizitate);
 		}
@@ -114,7 +147,19 @@ void Graf::DFSAux(int nodStart, vector<bool>& vizitate)
 	
 }
 
-int Graf::DFSrezolvare(int nodStart)
+//
+// Resume NrCompConexeDFS:
+// 
+// se determina numarul componentelor conexe ale grafului
+// 
+// Mod functionare:
+// 
+// Incrementam numarul de componente pentru fiecare apel al DFSAux
+// Pt ca fiecare apel DFS marcheaza toate nodurile din cate o componenta conexa
+// Deci fiecare apel ne baga intr-o componenta conexa noua
+//
+
+int Graf::NrCompConexeDFS(int nodStart)
 {
 	vector<bool> vizitate(nrNoduri+1, false);
 	int nrComponente = 0;
@@ -122,48 +167,48 @@ int Graf::DFSrezolvare(int nodStart)
 	for (int i = 1; i < vizitate.size(); i++)
 	{
 		if (!vizitate[i])
-		{									//Incrementam numarul de componente pentru fiecare apel al DFSAux
-			DFSAux(i, vizitate);			//Pt ca fiecare apel DFS marcheaza toate nodurile din cate o componenta conexa
-			nrComponente++;					//Deci fiecare apel ne baga intr-o componenta conexa noua
+		{									
+			DFSAux(i, vizitate);			
+			nrComponente++;					
 		}
 	}
 	return nrComponente;
 }
 
-void Graf::DFSTopological(int nodStart, vector<bool>& vizitate, stack<int>& s)
-{
-	vizitate[nodStart] = true;
-	for (int i : listaAdiacenta[nodStart])
-	{
-		if (!vizitate[i])
-		{
-			DFSTopological(i, vizitate, s);				//DFS care construieste stackul cu nodurile in ordine pentru sortarea topologica
-		}												//precum ne spun si indicatiile de rezolvare de pe infoarena
-	}
-	s.push(nodStart);
-}
+//
+// Resume BCXAux :
+// 
+// Aceasta metoda construieste vectorul primit ca parametru componenteBiconexe
+// 
+// Mod functionare:
+// 
+// Folosim algoritmul lui Tarjan, care construieste vectorii adancimi si adancimiMinime
+// adancimi reprezinta adancimea fiecarui nod iar adancimi minime este adancimea minima la care se poate
+// ajunge de la fiecare nod prin drumuri de intoarcere. Dupa ce construim acesti vectori prin apeluri DFS,
+// identificam punctele critice apoi construim componenta cu toate nodurile care sunt retinute in stiva
+// 
 
-void Graf::BCXAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vector<int>& adancimeMinima, vector<int>& parinti, stack<int>& s, vector<vector<int>>& componenteBCX)
+void Graf::BCXAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vector<int>& adancimiMinime, vector<int>& parinti, stack<int>& s, vector<vector<int>>& componenteBCX)
 {
 	adancimi[nodStart] = adancimeStart;					//vector care retine adancimea nodurilor in parcurgerea DFS
-	adancimeMinima[nodStart] = adancimeStart;			//vector care retine cat de sus(adancime) poate un nod sa ajunga pe un drum in "jos"
+	adancimiMinime[nodStart] = adancimeStart;			//vector care retine cat de sus(adancime) poate un nod sa ajunga pe un drum in "jos"
 	adancimeStart++;									//adancimea curenta in DFS
 
 	for (auto vecin : listaAdiacenta[nodStart])
 	{
-		s.push(nodStart);								//pusham fiecare nod in stiva
+		s.push(nodStart);								//adaugam fiecare nod in stiva
 		
 		if (parinti[vecin] == -1)						//=> vecin nu este vizitat
 		{
 			parinti[vecin] = nodStart;					//parintele vecinului va fi nodul cuc are apelam functia
 
-			BCXAux(vecin, adancimeStart, adancimi, adancimeMinima, parinti, s, componenteBCX);		//DFS
+			BCXAux(vecin, adancimeStart, adancimi, adancimiMinime, parinti, s, componenteBCX);		//DFS
 
-			adancimeMinima[nodStart] = min(adancimeMinima[vecin], adancimeMinima[nodStart]);		//actualizam adancimea minima a nodului curent
+			adancimiMinime[nodStart] = min(adancimiMinime[vecin], adancimiMinime[nodStart]);		//actualizam adancimea minima a nodului curent
 																									//practic verificam daca fiul sau poate ajunge la un stramos al lui
 																																											
 				
-			if (adancimi[nodStart] <= adancimeMinima[vecin])			//nodStart == punct critic    =>    aici se termina componenta biconexa
+			if (adancimi[nodStart] <= adancimiMinime[vecin])			//nodStart == punct critic    =>    aici se termina componenta biconexa
 			{
 				vector<int> componenta;
 				componenta.push_back(nodStart);
@@ -191,12 +236,19 @@ void Graf::BCXAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vecto
 		}
 		else
 		{
-			adancimeMinima[nodStart] = min(adancimi[vecin], adancimeMinima[nodStart]);				//daca vecin este vizitat => adancimi[vecin] < adancimi[nodStart]
+			adancimiMinime[nodStart] = min(adancimi[vecin], adancimiMinime[nodStart]);				//daca vecin este vizitat => adancimi[vecin] < adancimi[nodStart]
 		}																							//=> actualizam adancimeaMinima[nodStart] cu minimul dintre adancimea 
 																									//vecinului si adancimeaMinima a nodStart
 		
 	}
 }
+
+//
+//	Resume Biconexe:
+// 
+//	Construim vectorii necesari pe care ii trimitem ca si parametri in BCXAux,
+// apoi afisam componentele biconexe
+//
 
 void Graf::Biconexe()
 {
@@ -222,8 +274,45 @@ void Graf::Biconexe()
 	
 }
 
-void Graf::HavelHakimi()
+void countSort(vector<int>& v)
 {
+	int max = v[0];
+
+	for (int i = 1; i < v.size(); i++)
+	{
+		if (v[i] > max)
+		{
+			max = v[i];
+		}
+	}
+
+	vector<int> frecventa(max + 1, 0);
+	int k = 0;
+
+	for (int i = 0; i < v.size(); i++)
+	{
+		frecventa[v[i]]++;
+	}
+
+	for (int i = 0; i <= max; i++)
+	{
+		for (int j = 0; j < frecventa[i]; j++)
+		{
+			v[k++] = i;
+		}
+
+	}
+};
+
+//
+// Resume HavelHakimi:
+// 
+// Verificam daca o secventa de int-uri care reprezinta gradele unor noduri
+// poate forma un graf sau nu
+//
+
+void Graf::HavelHakimi()
+{	
 	int n, nod;
 	vector<int> secventa;
 	cin >> n;
@@ -233,7 +322,9 @@ void Graf::HavelHakimi()
 		secventa.push_back(nod);
 	}
 	while (true) {
-		sort(secventa.begin(), secventa.end());
+		
+		countSort(secventa);
+
 		int deScazut = secventa[0];
 
 		secventa.erase(secventa.begin());
@@ -279,7 +370,23 @@ void Graf::HavelHakimi()
 		}
 	}
 	
+
+
 }
+
+//
+// Resume CTCAux :
+// 
+// Aceasta metoda construieste vectorul primit ca parametru componenteCTC
+// 
+// Mod functionare:
+// 
+// Folosim algoritmul lui Tarjan, care construieste vectorii adancimi si adancimiMinime
+// adancimi reprezinta adancimea fiecarui nod iar adancimi minime este adancimea minima la care se poate
+// ajunge de la fiecare nod prin drumuri de intoarcere. Dupa ce construim acesti vectori prin apeluri DFS,
+// identificam varfurile subarborilor care formeaza componente tare conexe 
+// apoi construim componenta cu toate nodurile care sunt retinute in stiva
+// 
 
 void Graf::CTCAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vector<int>& adancimeMinima, vector<bool>& peStiva, stack<int>& s, vector<vector<int>>& componenteCTC)
 {
@@ -328,6 +435,13 @@ void Graf::CTCAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vecto
 	}
 }
 
+//
+//	Resume CTC:
+// 
+//	Construim vectorii necesari pe care ii trimitem ca si parametri in CTCAux,
+// apoi afisam componentele tare conexe
+//
+
 void Graf::CTC()
 {
 	vector<int> adancimi(nrNoduri + 1, -1);
@@ -353,6 +467,19 @@ void Graf::CTC()
 		fout << "\n";
 	}
 }
+
+//
+// Resume MuchiiAux :
+// 
+// Aceasta metoda construieste vectorul primit ca parametru componenteCTC
+// 
+// Mod functionare:
+// 
+// Folosim algoritmul lui Tarjan, care construieste vectorii adancimi si adancimiMinime
+// adancimi reprezinta adancimea fiecarui nod iar adancimi minime este adancimea minima la care se poate
+// ajunge de la fiecare nod prin drumuri de intoarcere. Dupa ce construim acesti vectori prin apeluri DFS,
+// identificam muchiile critice apoi construim vectorul care retine muchiile
+// 
 
 void Graf::MuchiiAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vector<int>& adancimeMinima, vector<int>& parinti, vector<bool>& vizitate, vector<vector<int>>& MuchiiCritice)
 {
@@ -393,6 +520,13 @@ void Graf::MuchiiAux(int nodStart, int& adancimeStart, vector<int>& adancimi, ve
 	}
 }
 
+//
+//	Resume MuchiiCrit():
+// 
+//	Construim vectorii necesari pe care ii trimitem ca si parametri in MuchiiAux,
+// apoi afisam muchiile critice
+//
+
 void Graf::MuchiiCrit()
 {
 	vector<bool> vizitate(nrNoduri + 1, false);
@@ -421,6 +555,26 @@ void Graf::MuchiiCrit()
 
 }
 
+//
+// Resume DFSTopological:
+// 
+// DFS care construieste stackul cu nodurile in ordine pentru sortarea topologica
+// poate forma un graf sau nu
+//
+
+void Graf::DFSTopological(int nodStart, vector<bool>& vizitate, stack<int>& s)
+{
+	vizitate[nodStart] = true;
+	for (int i : listaAdiacenta[nodStart])
+	{
+		if (!vizitate[i])
+		{
+			DFSTopological(i, vizitate, s);
+		}
+	}
+	s.push(nodStart);
+}
+
 void Graf::SortareTopologica()
 {
 	stack<int> s;
@@ -441,16 +595,316 @@ void Graf::SortareTopologica()
 	}
 }
 
-int main()
+//---------------------------COD TEMA 2---------------------------------------------------------------------------------------------------
+
+vector<int> costuri;		//Folosit pentru functia de comparare pentru sort-ul din Kruskall
+
+class GrafPonderat :public Graf
 {
+protected:
+	vector<pair<pair<int, int>, int>> reprezentareGrafPonderat;
+	vector<vector<pair<int, int>>> listaAdiacentaPonderata;
+private:
+	void KruskallReuniune(vector<int>&, int, int);			//Metoda Auxiliara pentru Kruskall + PaduriMultimiDisjuncte
+	int KruskallFindMultime(vector<int>&, int);				//Metoda Auxiliara pentru Kruskall + PaduriMultimiDisjuncte
+	static bool KruskallComp(int m1, int m2)				//Metoda Auxiliara pentru Kruskall
+	{
+		return costuri[m1] < costuri[m2];
+	};
+public:
+	GrafPonderat();
+	GrafPonderat(int, int, bool);
+
+	void setListaAdiacentaPonderata();
+	void setReprezentareGrafPonderat();
+	void Kruskall();								//Algoritmul lui Kruskall
+	void PaduriMultimiDisjuncte();					//Creeaza multimi si ne spune daca doua elemente se afla in aceeasi mulime/nu
+	void Dijkstra(int);								//Algoritmul lui Dijkstra
+	void BellmanFord(int);							//Algoritmul lui Bellman Ford
+};
+
+GrafPonderat::GrafPonderat() :Graf() {};
+
+GrafPonderat::GrafPonderat(int nrN, int nrM, bool orr) :Graf(nrN, nrM, orr) {};
+
+void GrafPonderat::setListaAdiacentaPonderata()
+{
+	int x, y, z;
+	listaAdiacentaPonderata.resize(nrMuchii + 1);
+	for (int i = 0; i < nrMuchii; i++)
+	{
+		fin >> x >> y >> z;
+		listaAdiacentaPonderata[x].push_back(make_pair(y, z));
+	}
+
+}
+
+void GrafPonderat::setReprezentareGrafPonderat()
+{
+	int x, y, z;
+
+	for (int i = 0; i < nrMuchii; i++)
+	{
+		fin >> x >> y >> z;
+		reprezentareGrafPonderat.push_back(make_pair(make_pair(x, y), z));
+	}
+}
+
+//
+// Resume BellmanFord():
+// 
+// Determinam daca in graful dat exista un ciclu de cost negativ.
+// Daca nu exista, se determina costul minim al unui lant de la nodul 1 la fiecare dintre nodurile 2, 3, ... , N-1, N.
+// 
+// Mod de functionare:
+// 
+// Initializam distantele de la nodSursa la toate celelalte noduri cu o valoare cat mai mare
+// Declaram o coada in care vom retine nodurile si un vector in care retinem daca un nod formeaza un ciclu negativ sau nu.
+// 
+// Cat timp mai avem elemente in coada (nodSursa este adaugat initial in coada), luam primul nod din ea
+// si parcurgem toate nodurile adiacente cu acesta. Daca muchia formata din cele doua noduri poate fii relaxata,
+// o relaxam, si daca acesta nu se afla in coada il adaugam in ea. Valoarea nodului din formCiclu este incrementata, daca
+// aceasta depaseste nrNoduri+1 atunci formeaza un ciclu negativ.
+//
+
+void GrafPonderat::BellmanFord(int nodSursa)
+{
+	vector<int> distante(nrNoduri + 1, 2000000);
+	distante[nodSursa] = 0;
+
+	queue<int> q;
+	q.push(nodSursa);
+
+	vector<bool> inQueue(nrNoduri + 1, false);
+	inQueue[nodSursa] = true;
+
+	vector<int> formCiclu(nrNoduri + 1, 0);
+
+	while (!q.empty())
+	{
+		int nodCurent = q.front();
+		q.pop();
+		inQueue[nodCurent] = false;
+
+		for (auto muchie : listaAdiacentaPonderata[nodCurent])
+		{
+			int nodAdiacent = muchie.first;
+			int greutateMuchie = muchie.second;
+
+			if (distante[nodCurent] != 2000000 && distante[nodAdiacent] > distante[nodCurent] + greutateMuchie)
+			{
+				distante[nodAdiacent] = distante[nodCurent] + greutateMuchie;
+
+				if (!inQueue[nodAdiacent])
+				{
+					q.push(nodAdiacent);
+					inQueue[nodAdiacent] = true;
+					formCiclu[nodAdiacent]++;
+
+					if (formCiclu[nodAdiacent] > nrNoduri + 1)
+					{
+						fout << "Ciclu negativ!";
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	for (int i = 2; i <= nrNoduri; i++)
+	{
+		if (distante[i] == 2000000)
+		{
+			cout << 'e';
+			distante[i] = 0;
+		}
+		fout << distante[i] << ' ';
+	}
+
+}
+
+//
+// Resume Dijkstra():
+// 
+// Se determina lungimea minima a drumului de la nodul 1 la fiecare din nodurile 2, 3, ..., N-1, N 
+// si sa se afiseze aceste lungimi. Lungimea unui drum este data de suma lungimilor arcelor care constituie drumul.
+// 
+// Mod de functionare:
+// 
+// Declaram un heap de pair-uri si inseram in el primul nod, cu greutatea 0. Vom tine greutatea ca primul
+// element din pair, ca sa avem nodul cu greutatea minim ain varful heapului.
+// Cat timp avem elemente in heap, adica mai avem distante minime de verificat, extragem nodul din heap,
+// iteram prin adiacentii lui, si verificam daca muchia formata trebuie relaxata. Daca da o relaxam si apoi daca muchia
+// a mai fost relaxata stergem nodul din heap si il reintroducem cu noua distanta minima
+// Apoi afisam distantele.
+// 
+
+void GrafPonderat::Dijkstra(int nodSursa)
+{
+	set<pair<int, int>> heap;
+	heap.insert({ 0, nodSursa });
+
+	vector<int> distante(nrNoduri + 1, 2000000);
+	distante[nodSursa] = 0;
+
+	while (!heap.empty())
+	{
+		pair<int, int> nodCurent = *heap.begin();
+		heap.erase(heap.begin());
+
+		for (auto nodAdiacent : listaAdiacentaPonderata[nodCurent.second])
+		{
+			if (distante[nodAdiacent.first] > distante[nodCurent.second] + nodAdiacent.second)
+			{
+				if (distante[nodAdiacent.first] != 2000000)
+				{
+					heap.erase(heap.find(make_pair(distante[nodAdiacent.first], nodAdiacent.first)));
+				}
+				distante[nodAdiacent.first] = distante[nodCurent.second] + nodAdiacent.second;
+				heap.insert(make_pair(distante[nodAdiacent.first], nodAdiacent.first));
+			}
+		}
+	}
+
+	for (int i = 2; i <= nrNoduri; i++)
+	{
+		if (distante[i] == 2000000)
+		{
+			distante[i] = 0;
+		}
+		fout << distante[i] << ' ';
+	}
+}
+
+//
+// Resume PaduriMultimiDisjuncte:
+// 
+// Aplicam metodele folosite in algoritmul lui Dijksrtra
+//
+
+void GrafPonderat::PaduriMultimiDisjuncte()
+{
+	cout << 'a';
 	int n, m;
 	fin >> n >> m;
-	//Graf G(n, m, true/false);
-	
-	//G.Metoda();
+	vector<int> multime(n + 1, -1);
+	vector<int> indici;
+	cout << 'a';
+	for (int i = 1; i < n + 1; i++)
+	{
+		multime[i] = i;
+	}
+	cout << 'a';
+	for (int i = 1; i <= m; i++)
+	{
 
+		int operatie;
+		fin >> operatie;
+		if (operatie == 1)
+		{
+			cout << 'b';
+			int x, y;
+			fin >> x >> y;
+			KruskallReuniune(multime, x, y);
+		}
 
-	//Acest proiect nu ar fi fost posibil fara geeksforgeeks.org, asa ca vreau sa le transmit multumiri :))
+		else
+		{
+			cout << 'c';
+			int x, y;
+			fin >> x >> y;
+
+			if (KruskallFindMultime(multime, x) == KruskallFindMultime(multime, y))
+			{
+				fout << "DA\n";
+			}
+			else
+			{
+				fout << "NU\n";
+			}
+		}
+	}
+}
+
+//
+// Resume KruskallReuniune():
+// 
+// adauga nodul i in multimea lui j
+//
+
+void GrafPonderat::KruskallReuniune(vector<int>& multime, int i, int j)
+{
+	multime[KruskallFindMultime(multime, i)] = KruskallFindMultime(multime, j);
+}
+
+int GrafPonderat::KruskallFindMultime(vector<int>& multime, int i)
+{
+	if (multime[i] == i)
+	{
+		return i;
+	}
+	multime[i] = KruskallFindMultime(multime, multime[i]);
+	return multime[i];
+}
+
+//
+// Resume Kruskall():
+// 
+// Afiseaza un arbore partial de cost minim al grafului
+// 
+// Mod de functionare:
+// 
+// Aplica algoritmul lui Kruskall. Sorteaza muchiile dupa costuri crescator
+// apoi pt fiecare muchie verifica daca nodurile care formeaza muchia sunt in aceeasi componenta conexa
+// cu ajutorul multimilor disjuncte. daca nu sunt in aceeasi multime folosim functia de reuniune
+// si apoi adaugam muchia in vectorul in care retinem muchii
+//
+
+void GrafPonderat::Kruskall()
+{
+	vector<int> indici(nrMuchii, -1);
+	vector<int> multime(nrNoduri + 1, -1);
+	int suma = 0;
+	vector<int> muchii;
+
+	for (int i = 0; i < nrMuchii; i++)
+	{
+		indici[i] = i;
+	}
+
+	for (int i = 1; i <= nrNoduri; i++)
+	{
+		multime[i] = i;
+	}
+
+	for (auto i : reprezentareGrafPonderat)
+	{
+		costuri.push_back(i.second);
+	}
+
+	sort(indici.begin(), indici.end(), KruskallComp);
+
+	for (int i = 1; i <= nrMuchii; i++)
+	{
+		int indexIndici = i - 1;
+		if (KruskallFindMultime(multime, reprezentareGrafPonderat[indici[indexIndici]].first.first) != KruskallFindMultime(multime, reprezentareGrafPonderat[indici[indexIndici]].first.second))
+		{
+			suma += reprezentareGrafPonderat[indici[indexIndici]].second;
+			KruskallReuniune(multime, reprezentareGrafPonderat[indici[indexIndici]].first.first, reprezentareGrafPonderat[indici[indexIndici]].first.second);
+			muchii.push_back(indici[indexIndici]);
+		}
+	}
+
+	fout << suma << "\n";
+	fout << muchii.size() << "\n";
+	for (int i = 0; i < muchii.size(); i++)
+	{
+		fout << reprezentareGrafPonderat[muchii[i]].first.first << ' ' << reprezentareGrafPonderat[muchii[i]].first.second << "\n";
+	}
+}
+
+int main()
+{
 
 	return 0;
 }
