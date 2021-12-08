@@ -13,3 +13,5 @@ Bellman Ford: https://infoarena.ro/job_detail/2807105
 Dijkstra: https://infoarena.ro/job_detail/2806339
 Paduri de multimi disjuncte: https://infoarena.ro/job_detail/2805663
 APM : https://infoarena.ro/job_detail/2805641
+Diametrul unui arbore: https://infoarena.ro/job_detail/2811228
+Roy-Floyd: https://infoarena.ro/job_detail/2814089
