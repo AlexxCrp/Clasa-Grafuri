@@ -9,8 +9,8 @@
 
 using namespace std;
 
-ifstream fin("royfloyd.in");
-ofstream fout("royfloyd.out");
+ifstream fin("dfs.in");
+ofstream fout("dfs.out");
 
 //---------------------------------COD TEMA 1--------------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ protected:
 private:
 	void adaugaMuchie(int, int, bool);
 	//Metoda auxiliara folosita in NrCompConexeDFS
-	vector<bool> DFSAux(int, vector<bool>);
+	void DFSAux(int, vector<bool>&);
 	//Metoda auxiliara folosita in Biconexe()
 	void BCXAux(int, int&, vector<int>&, vector<int>&, vector<int>&, stack<int>&, vector<vector<int>>&);
 	//Metoda auxiliara folosita in CTC()
@@ -31,7 +31,7 @@ private:
 	//Metoda auxiliara folosita in MuchiiCrit()
 	void MuchiiAux(int, int&, vector<int>&, vector<int>&, vector<int>&, vector<bool>&, vector<vector<int>>&);
 	//Metoda auxiliara pt Sortarea topologica
-	void DFSTopological(int, vector<bool>&, stack<int>&);	
+	void DFSTopological(int, vector<bool>&, stack<int>&);
 
 	friend void countSort(vector<int>&);
 public:
@@ -41,8 +41,8 @@ public:
 	vector<int> BFS(int);					//Metoda care rezolva problema BFS de pe infoarena
 	int NrCompConexeDFS(int);				//Metoda care rezolva problema DFS de pe infoarena
 	vector<vector<int>> Biconexe();			//Metoda care rezolva problema Componente Biconexe de pe infoarena
-	bool HavelHakimi();						//Metoda care pune in practica Havel Hakimi	
-	vector<vector<int>> CTC();				//Metoda care afiseaza componentele tare conexe ale grafului	
+	bool HavelHakimi();						//Metoda care pune in practica Havel Hakimi
+	vector<vector<int>> CTC();				//Metoda care afiseaza componentele tare conexe ale grafului
 	vector<vector<int>> MuchiiCrit();		//Metoda care afiseaza muchiile critice ale grafului
 	stack<int> SortareTopologica();			//Metoda care sorteaza topologic nodurile grafului
 	int DiametruArbore();					//Metoda care determina diametrul arborelui
@@ -61,14 +61,14 @@ Graf::Graf(int n, int m, bool orr)
 	nrNoduri = n;
 	nrMuchii = m;
 	orientat = orr;
-	
+
 }
 
 void Graf::setListaAdiacenta()
 {
 	int x, y;
 
-	listaAdiacenta.resize(nrNoduri + 1);	
+	listaAdiacenta.resize(nrNoduri + 1);
 
 	for (int i = 0; i < nrMuchii; i++)
 	{
@@ -87,13 +87,13 @@ void Graf::adaugaMuchie(int n1, int n2, bool orr)
 }
 
 // Resume BFS:
-// 
+//
 // Fiind dat un nod S, se determina,
-// pentru fiecare nod X, numarul minim de arce ce trebuie 
+// pentru fiecare nod X, numarul minim de arce ce trebuie
 // parcurse pentru a ajunge din nodul sursa S la nodul X
-// 
+//
 // Mod functionare:
-// 
+//
 // Folosim BFS si retinem distantele intr-un vector
 // Apoi le afisam
 
@@ -132,27 +132,25 @@ vector<int> Graf::BFS(int nodStart)
 // DFS care modifica lista de noduri vizitate din metoda NrCompConexeDFS
 //
 
-vector<bool> Graf::DFSAux(int nodStart, vector<bool> vizitate)
+void Graf::DFSAux(int nodStart, vector<bool>& vizitate)
 {
 	vizitate[nodStart] = true;
 	for (int i : listaAdiacenta[nodStart])
 	{
-		if (!vizitate[i])					
+		if (!vizitate[i])
 		{
 			DFSAux(i, vizitate);
 		}
 	}
-	
-	return vizitate;
 }
 
 //
 // Resume NrCompConexeDFS:
-// 
+//
 // se determina numarul componentelor conexe ale grafului
-// 
+//
 // Mod functionare:
-// 
+//
 // Incrementam numarul de componente pentru fiecare apel al DFSAux
 // Pt ca fiecare apel DFS marcheaza toate nodurile din cate o componenta conexa
 // Deci fiecare apel ne baga intr-o componenta conexa noua
@@ -162,13 +160,13 @@ int Graf::NrCompConexeDFS(int nodStart)
 {
 	vector<bool> vizitate(nrNoduri+1, false);
 	int nrComponente = 0;
-	
+
 	for (int i = 1; i < vizitate.size(); i++)
 	{
 		if (!vizitate[i])
-		{									
-			vizitate = DFSAux(i, vizitate);			
-			nrComponente++;					
+		{
+			DFSAux(i, vizitate);
+			nrComponente++;
 		}
 	}
 	return nrComponente;
@@ -176,16 +174,16 @@ int Graf::NrCompConexeDFS(int nodStart)
 
 //
 // Resume BCXAux :
-// 
+//
 // Aceasta metoda construieste vectorul primit ca parametru componenteBiconexe
-// 
+//
 // Mod functionare:
-// 
+//
 // Folosim algoritmul lui Tarjan, care construieste vectorii adancimi si adancimiMinime
 // adancimi reprezinta adancimea fiecarui nod iar adancimi minime este adancimea minima la care se poate
 // ajunge de la fiecare nod prin drumuri de intoarcere. Dupa ce construim acesti vectori prin apeluri DFS,
 // identificam punctele critice apoi construim componenta cu toate nodurile care sunt retinute in stiva
-// 
+//
 
 void Graf::BCXAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vector<int>& adancimiMinime, vector<int>& parinti, stack<int>& s, vector<vector<int>>& componenteBCX)
 {
@@ -196,7 +194,7 @@ void Graf::BCXAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vecto
 	for (auto vecin : listaAdiacenta[nodStart])
 	{
 		s.push(nodStart);								//adaugam fiecare nod in stiva
-		
+
 		if (parinti[vecin] == -1)						//=> vecin nu este vizitat
 		{
 			parinti[vecin] = nodStart;					//parintele vecinului va fi nodul cu care apelam functia
@@ -205,29 +203,29 @@ void Graf::BCXAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vecto
 
 			adancimiMinime[nodStart] = min(adancimiMinime[vecin], adancimiMinime[nodStart]);		//actualizam adancimea minima a nodului curent
 																									//practic verificam daca fiul sau poate ajunge la un stramos al lui
-																																											
-				
+
+
 			if (adancimi[nodStart] <= adancimiMinime[vecin])			//nodStart == punct critic    =>    aici se termina componenta biconexa
 			{
 				vector<int> componenta;
 				componenta.push_back(nodStart);
 
 				vector<bool> adaugat(nrNoduri + 1, false);				//nevoie de acest vector pt ca pusham acelasi nod de mai multe ori in stiva in unele cazuri
-				adaugat[nodStart] = true;								
+				adaugat[nodStart] = true;
 
 				int nod = s.top();
 				s.pop();
 				componenta.push_back(nod);
 				adaugat[nod] = true;
 
-				while (nod != nodStart)						//construim componenta cu toate nodurile din stiva 
-				{												
-					nod = s.top();					
+				while (nod != nodStart)						//construim componenta cu toate nodurile din stiva
+				{
+					nod = s.top();
 					s.pop();
 					if (!adaugat[nod]) {
 						componenta.push_back(nod);
 						adaugat[nod] = true;
-					}	
+					}
 				}
 
 				componenteBCX.push_back(componenta);
@@ -236,15 +234,15 @@ void Graf::BCXAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vecto
 		else
 		{
 			adancimiMinime[nodStart] = min(adancimi[vecin], adancimiMinime[nodStart]);				//daca vecin este vizitat => adancimi[vecin] < adancimi[nodStart]
-		}																							//=> actualizam adancimeaMinima[nodStart] cu minimul dintre adancimea 
+		}																							//=> actualizam adancimeaMinima[nodStart] cu minimul dintre adancimea
 																									//vecinului si adancimeaMinima a nodStart
-		
+
 	}
 }
 
 //
 //	Resume Biconexe:
-// 
+//
 //	Construim vectorii necesari pe care ii trimitem ca si parametri in BCXAux,
 // apoi afisam componentele biconexe
 //
@@ -295,13 +293,13 @@ void countSort(vector<int>& v)
 
 //
 // Resume HavelHakimi:
-// 
+//
 // Verificam daca o secventa de int-uri care reprezinta gradele unor noduri
 // poate forma un graf sau nu
 //
 
 bool Graf::HavelHakimi()
-{	
+{
 	int n, nod;
 	vector<int> secventa;
 	cin >> n;
@@ -311,13 +309,13 @@ bool Graf::HavelHakimi()
 		secventa.push_back(nod);
 	}
 	while (true) {
-		
+
 		countSort(secventa);
 
 		int deScazut = secventa[0];
 
 		secventa.erase(secventa.begin());
-		
+
 		if (secventa.size() < deScazut)
 		{
 			cout << "Nu merge";
@@ -360,17 +358,17 @@ bool Graf::HavelHakimi()
 
 //
 // Resume CTCAux :
-// 
+//
 // Aceasta metoda construieste vectorul primit ca parametru componenteCTC
-// 
+//
 // Mod functionare:
-// 
+//
 // Folosim algoritmul lui Tarjan, care construieste vectorii adancimi si adancimiMinime
 // adancimi reprezinta adancimea fiecarui nod iar adancimi minime este adancimea minima la care se poate
 // ajunge de la fiecare nod prin drumuri de intoarcere. Dupa ce construim acesti vectori prin apeluri DFS,
-// identificam varfurile subarborilor care formeaza componente tare conexe 
+// identificam varfurile subarborilor care formeaza componente tare conexe
 // apoi construim componenta cu toate nodurile care sunt retinute in stiva
-// 
+//
 
 void Graf::CTCAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vector<int>& adancimeMinima, vector<bool>& peStiva, stack<int>& s, vector<vector<int>>& componenteCTC)
 {
@@ -394,7 +392,7 @@ void Graf::CTCAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vecto
 		else if(peStiva[vecin] == true)
 		{
 			adancimeMinima[nodStart] = min(adancimi[vecin], adancimeMinima[nodStart]);				//daca vecin este vizitat => adancimi[vecin] < adancimi[nodStart]
-		}																							//=> actualizam adancimeaMinima[nodStart] cu minimul dintre adancimea 
+		}																							//=> actualizam adancimeaMinima[nodStart] cu minimul dintre adancimea
 																									//vecinului si adancimeaMinima a nodStart
 	}
 
@@ -421,7 +419,7 @@ void Graf::CTCAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vecto
 
 //
 //	Resume CTC:
-// 
+//
 //	Construim vectorii necesari pe care ii trimitem ca si parametri in CTCAux,
 // apoi afisam componentele tare conexe
 //
@@ -447,16 +445,16 @@ vector<vector<int>> Graf::CTC()
 
 //
 // Resume MuchiiAux :
-// 
+//
 // Aceasta metoda construieste vectorul primit ca parametru componenteCTC
-// 
+//
 // Mod functionare:
-// 
+//
 // Folosim algoritmul lui Tarjan, care construieste vectorii adancimi si adancimiMinime
 // adancimi reprezinta adancimea fiecarui nod iar adancimi minime este adancimea minima la care se poate
 // ajunge de la fiecare nod prin drumuri de intoarcere. Dupa ce construim acesti vectori prin apeluri DFS,
 // identificam muchiile critice apoi construim vectorul care retine muchiile
-// 
+//
 
 void Graf::MuchiiAux(int nodStart, int& adancimeStart, vector<int>& adancimi, vector<int>& adancimeMinima, vector<int>& parinti, vector<bool>& vizitate, vector<vector<int>>& MuchiiCritice)
 {
@@ -475,8 +473,8 @@ void Graf::MuchiiAux(int nodStart, int& adancimeStart, vector<int>& adancimi, ve
 
 			adancimeMinima[nodStart] = min(adancimeMinima[vecin], adancimeMinima[nodStart]);		//actualizam adancimea minima a nodului curent
 																									//practic verificam daca fiul sau poate ajunge la un stramos al lui
-			
-			
+
+
 			if (adancimeMinima[vecin] > adancimi[nodStart])				//conditie muchie critica
 			{
 				vector<int> muchieCritica;
@@ -487,11 +485,11 @@ void Graf::MuchiiAux(int nodStart, int& adancimeStart, vector<int>& adancimi, ve
 			}
 
 		}
-			
-		else if(vecin != parinti[nodStart])				
+
+		else if(vecin != parinti[nodStart])
 		{
 			adancimeMinima[nodStart] = min(adancimi[vecin], adancimeMinima[nodStart]);				//daca vecin este vizitat => adancimi[vecin] < adancimi[nodStart]
-		}																							//=> actualizam adancimeaMinima[nodStart] cu minimul dintre adancimea 
+		}																							//=> actualizam adancimeaMinima[nodStart] cu minimul dintre adancimea
 																									//vecinului si adancimeaMinima a nodStart
 
 	}
@@ -499,7 +497,7 @@ void Graf::MuchiiAux(int nodStart, int& adancimeStart, vector<int>& adancimi, ve
 
 //
 //	Resume MuchiiCrit():
-// 
+//
 //	Construim vectorii necesari pe care ii trimitem ca si parametri in MuchiiAux,
 // apoi afisam muchiile critice
 //
@@ -513,21 +511,21 @@ vector<vector<int>> Graf::MuchiiCrit()
 	vector<int> parinti(nrNoduri + 1, -1);
 	int adancime = 1;
 	parinti[1] = 1;
-	for (int i = 1; i < vizitate.size(); i++) 
+	for (int i = 1; i < vizitate.size(); i++)
 	{
 		if (!vizitate[i])
 		{
 			MuchiiAux(i, adancime, adancimi, adancimeMinima, parinti,vizitate, muchii);
 		}
 	}
-	
+
 	return muchii;
 
 }
 
 //
 // Resume DFSTopological:
-// 
+//
 // DFS care construieste stackul cu nodurile in ordine pentru sortarea topologica
 // poate forma un graf sau nu
 //
@@ -591,7 +589,7 @@ public:
 	vector<int> Dijkstra(int);						//Algoritmul lui Dijkstra
 	vector<int> BellmanFord(int);					//Algoritmul lui Bellman Ford
 	vector<vector<int>> RoyFloyd();					// Algoritmul Roy-Floyd
-	void printMatriceCosturiMinime();				
+	void printMatriceCosturiMinime();
 	bool isEulerian();
 	vector<int> CicluEulerian();
 };
@@ -625,15 +623,15 @@ void GrafPonderat::setlistaMuchiiPonderate()
 
 //
 // Resume BellmanFord():
-// 
+//
 // Determinam daca in graful dat exista un ciclu de cost negativ.
 // Daca nu exista, se determina costul minim al unui lant de la nodul 1 la fiecare dintre nodurile 2, 3, ... , N-1, N.
-// 
+//
 // Mod de functionare:
-// 
+//
 // Initializam distantele de la nodSursa la toate celelalte noduri cu o valoare cat mai mare
 // Declaram o coada in care vom retine nodurile si un vector in care retinem daca un nod formeaza un ciclu negativ sau nu.
-// 
+//
 // Cat timp mai avem elemente in coada (nodSursa este adaugat initial in coada), luam primul nod din ea
 // si parcurgem toate nodurile adiacente cu acesta. Daca muchia formata din cele doua noduri poate fii relaxata,
 // o relaxam, si daca acesta nu se afla in coada il adaugam in ea. Valoarea nodului din formCiclu este incrementata, daca
@@ -677,7 +675,11 @@ vector<int> GrafPonderat::BellmanFord(int nodSursa)
 					if (formCiclu[nodAdiacent] > nrNoduri + 1)
 					{
 						fout << "Ciclu negativ!";
-						return;
+						for (auto i : distante)
+						{
+							i = -1;
+						}
+						return distante;
 					}
 				}
 			}
@@ -698,19 +700,19 @@ vector<int> GrafPonderat::BellmanFord(int nodSursa)
 
 //
 // Resume Dijkstra():
-// 
-// Se determina lungimea minima a drumului de la nodul 1 la fiecare din nodurile 2, 3, ..., N-1, N 
+//
+// Se determina lungimea minima a drumului de la nodul 1 la fiecare din nodurile 2, 3, ..., N-1, N
 // si sa se afiseze aceste lungimi. Lungimea unui drum este data de suma lungimilor arcelor care constituie drumul.
-// 
+//
 // Mod de functionare:
-// 
+//
 // Declaram un Avl de pair-uri si inseram in el primul nod, cu greutatea 0. Vom tine greutatea ca primul
 // element din pair, ca sa avem nodul cu greutatea minim ain varful Avlului.
 // Cat timp avem elemente in Avl, adica mai avem distante minime de verificat, extragem nodul din Avl,
 // iteram prin adiacentii lui, si verificam daca muchia formata trebuie relaxata. Daca da o relaxam si apoi daca muchia
 // a mai fost relaxata stergem nodul din Avl si il reintroducem cu noua distanta minima
 // Apoi afisam distantele.
-// 
+//
 
 vector<int> GrafPonderat::Dijkstra(int nodSursa)
 {
@@ -752,7 +754,7 @@ vector<int> GrafPonderat::Dijkstra(int nodSursa)
 
 //
 // Resume PaduriMultimiDisjuncte:
-// 
+//
 // Aplicam metodele folosite in algoritmul lui Dijksrtra
 //
 
@@ -797,7 +799,7 @@ void GrafPonderat::PaduriMultimiDisjuncte()
 
 //
 // Resume Reuniune():
-// 
+//
 // adauga nodul i in multimea lui j
 //
 
@@ -818,11 +820,11 @@ int GrafPonderat::FindMultime(vector<int>& multime, int i)
 
 //
 // Resume Kruskall():
-// 
+//
 // Afiseaza un arbore partial de cost minim al grafului
-// 
+//
 // Mod de functionare:
-// 
+//
 // Aplica algoritmul lui Kruskall. Sorteaza muchiile dupa costuri crescator
 // apoi pt fiecare muchie verifica daca nodurile care formeaza muchia sunt in aceeasi componenta conexa
 // cu ajutorul multimilor disjuncte. daca nu sunt in aceeasi multime folosim functia de reuniune
@@ -892,17 +894,17 @@ void GrafPonderat::printMatriceCosturiMinime()
 
 //
 // Resume RoyFloyd():
-// 
+//
 // Returneaza matricea costurilor minime, care reprezinta costurile minime de la
 // oricare nod la altul. Daca nu se poate ajunge de la un anumit nod la altul, costul acestei perechi va fii 0
-// 
+//
 // Mod de functionare:
-// 
+//
 // Algoritmul compara toate caile posibile prin graf intre fiecare pereche de noduri.
 // Luam pe rand fiecare nod si il consideram un nod intermediar(adica drumul cu cost minim trece prin el).
 // Daca facem asta inseamna ca deja am considerat nodurile 1..k-1 ca fiind deja intermediare.
 // In cazul asta avem doua situatii: K este nod intermediar si updatam distanta, sau nu este si trecem mai departe.
-// 
+//
 
 vector<vector<int>> GrafPonderat::RoyFloyd()
 {
@@ -955,16 +957,16 @@ void GrafPonderat::setMatricePonderata()
 
 //
 // Resume DiametruArbore():
-// 
+//
 // Aflam lungimea drumului intre cele mai departate doua frunze.
-// 
+//
 // Mod de functionare:
-// 
+//
 // Facem un BFS din primul nod al grafului (merge din orice nod). Acesta ne va ajuta sa gasim
 // cea mai indepartata frunza de primul nod. Apoi facem un al doilea BFS pornind din aceasta frunza
 // gasind astfel cel mai indepartat nod de aceasta frunza. Aceste doua noduri sunt cele mai indepartate din graf, asa ca
 // aplicam algoritmul de distante, folosind un al treilea bfs, ca sa gasim distanta dintre cele 2 frunze.
-// 
+//
 
 int Graf::DiametruArbore()
 {
@@ -987,8 +989,8 @@ int Graf::DiametruArbore()
 		{
 			if (!vizitate[nodVecin])
 			{
-				vizitate[nodVecin] = true;			
-				q.push(nodVecin);					
+				vizitate[nodVecin] = true;
+				q.push(nodVecin);
 			}
 			frunza1 = nodCurent;
 		}
@@ -1012,8 +1014,8 @@ int Graf::DiametruArbore()
 		{
 			if (!vizitate[nodVecin])
 			{
-				vizitate[nodVecin] = true;			
-				q.push(nodVecin);	
+				vizitate[nodVecin] = true;
+				q.push(nodVecin);
 			}
 			frunza2 = nodCurent;
 		}
@@ -1044,7 +1046,7 @@ int Graf::DiametruArbore()
 			}
 		}
 
-		
+
 	}
 	diametru = distante[frunza2]+1;
 	return diametru;
@@ -1063,11 +1065,12 @@ bool GrafPonderat::isEulerian()
 	}
 	return true;
 }
-
+/*
 vector<int> GrafPonderat :: CicluEulerian()
 {
 
 }
+*/
 
 void GrafPonderat::setMultiGraf()
 {
@@ -1083,6 +1086,13 @@ void GrafPonderat::setMultiGraf()
 
 int main()
 {
+	int n, m;
+	fin >> n >> m;
+	Graf G(n, m, false);
+	G.setListaAdiacenta();
+	int numar = G.NrCompConexeDFS(1);
+
+	fout << numar;
 
 	return 0;
 }
